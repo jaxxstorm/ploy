@@ -21,5 +21,4 @@ jobs:
           version: v0.145.0
           args: release --rm-dist
         env:
-        env:
           GITHUB_TOKEN: ${{ secrets.ACTIONS_TOKEN }}
