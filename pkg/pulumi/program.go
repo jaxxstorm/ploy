@@ -94,7 +94,7 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 			Name: pulumi.String(name),
 			Labels: labels,
 		},
-	})
+	}, pulumi.Parent(ployDeployment))
 	if err != nil {
 		return nil, err
 	}
