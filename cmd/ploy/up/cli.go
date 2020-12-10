@@ -19,6 +19,7 @@ var (
 	name      string
 	directory string
 	verbose   bool
+	nlb       bool
 )
 
 func Command() *cobra.Command {
@@ -69,21 +70,21 @@ func Command() *cobra.Command {
 
 			// Set up the workspace and install all the required plugins the user needs
 			workspace := pulumiStack.Workspace()
-			err = workspace.InstallPlugin(ctx, "aws", "v3.11.0")
+			err = workspace.InstallPlugin(ctx, "aws", "v3.19.2")
 			if err != nil {
 				return fmt.Errorf("error installing aws plugin: %v\n", err)
 			}
-			err = workspace.InstallPlugin(ctx, "kubernetes", "v2.6.3")
+			err = workspace.InstallPlugin(ctx, "kubernetes", "v2.7.4")
 			if err != nil {
 				return fmt.Errorf("error installing kubernetes plugin: %v\n", err)
 			}
-			err = workspace.InstallPlugin(ctx, "docker", "v2.4.0")
+			err = workspace.InstallPlugin(ctx, "docker", "v2.5.0")
 			if err != nil {
 				return fmt.Errorf("error installing docker plugin: %v\n", err)
 			}
 
 			// Now, we set the pulumi program that is going to run
-			workspace.SetProgram(program.Deploy(name, directory))
+			workspace.SetProgram(program.Deploy(name, directory, nlb))
 
 			if dryrun {
 				_, err = pulumiStack.Preview(ctx, optpreview.Message("Running ploy dryrun"))
@@ -111,6 +112,7 @@ func Command() *cobra.Command {
 	f.BoolVarP(&dryrun, "preview", "p", false, "Preview changes, dry-run mode")
 	f.BoolVarP(&verbose, "verbose", "v", false, "Show output of Pulumi operations")
 	f.StringVarP(&directory, "dir", "d", ".", "Path to docker context to use")
+	f.BoolVar(&nlb, "nlb", false, "Provision an NLB instead of ELB")
 
 	return command
 }

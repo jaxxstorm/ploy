@@ -23,6 +23,7 @@ type PloyDeployment struct {
 
 type PloyDeploymentArgs struct {
 	Directory string
+	Nlb       bool
 }
 
 func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArgs, opts ...pulumi.ResourceOption) (*PloyDeployment, error) {
@@ -136,12 +137,25 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 		return nil, err
 	}
 
+	var serviceType pulumi.String
+	var annotations pulumi.StringMap
+	if args.Nlb {
+		serviceType = "NodePort"
+		annotations = pulumi.StringMap{
+			"service.beta.kubernetes.io/aws-load-balancer-type": pulumi.String("nlb-ip"),
+		}
+	} else {
+		serviceType = "LoadBalancer"
+		annotations = pulumi.StringMap{}
+	}
+
 	log.Info("Creating Kubernetes service")
 	service, err := corev1.NewService(ctx, name, &corev1.ServiceArgs{
 		Metadata: &metav1.ObjectMetaArgs{
 			Name: pulumi.String(name),
 			Namespace: namespace.Metadata.Name().Elem(),
 			Labels: labels,
+			Annotations: annotations,
 		},
 		Spec: &corev1.ServiceSpecArgs{
 			Ports: corev1.ServicePortArray{
@@ -150,7 +164,7 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 					TargetPort: pulumi.Int(80),
 				},
 			},
-			Type: pulumi.String("LoadBalancer"),
+			Type: serviceType,
 			Selector: labels,
 		},
 	}, pulumi.Parent(namespace), pulumi.DependsOn([]pulumi.Resource{image}))
@@ -175,11 +189,12 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 	return ployDeployment, nil
 }
 
-func Deploy(name string, directory string) pulumi.RunFunc {
+func Deploy(name string, directory string, nlb bool) pulumi.RunFunc {
 	return func(ctx *pulumi.Context) error {
 
 		_, err := NewPloyDeployment(ctx, name, &PloyDeploymentArgs{
 			Directory: directory,
+			Nlb: nlb,
 		})
 		if err != nil {
 			return err
