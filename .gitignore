@@ -16,3 +16,6 @@
 
 # ide
 .idea/
+
+# goreleaser
+dist/

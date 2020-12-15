@@ -68,9 +68,16 @@ func Command() *cobra.Command {
 						return fmt.Errorf("error selecting stack")
 					}
 					out, err := stack.Outputs(ctx)
+					
+					var url string
+					if out["address"].Value == nil {
+						url = ""
+					} else {
+						url = fmt.Sprintf("http://%s", out["address"].Value.(string))
+					}
 
 					// add all the values to the output tables
-					table.Append([]string{values.Name, values.LastUpdate, values.URL, fmt.Sprintf("http://%s", out["address"].Value.(string))})
+					table.Append([]string{values.Name, values.LastUpdate, values.URL, url })
 				}
 
 				// Render the table to stdout
