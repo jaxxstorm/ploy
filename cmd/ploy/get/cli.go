@@ -68,7 +68,7 @@ func Command() *cobra.Command {
 						return fmt.Errorf("error selecting stack")
 					}
 					out, err := stack.Outputs(ctx)
-					
+
 					var url string
 					if out["address"].Value == nil {
 						url = ""

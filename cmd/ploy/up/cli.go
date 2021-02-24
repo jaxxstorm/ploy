@@ -3,8 +3,10 @@ package up
 import (
 	"context"
 	"fmt"
+	"github.com/fatih/color"
 	n "github.com/jaxxstorm/ploy/pkg/name"
 	program "github.com/jaxxstorm/ploy/pkg/pulumi"
+	"github.com/jaxxstorm/ploy/pkg/utils"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optpreview"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optup"
@@ -92,15 +94,47 @@ func Command() *cobra.Command {
 					return fmt.Errorf("error creating stack: %v\n", err)
 				}
 			} else {
+
+				actionSpinner := utils.TerminalSpinner{
+					SpinnerText:   "Creating ploy deployment",
+					CompletedText: "✅ Ploy deployment created.",
+					FailureText:   "❌ Error creating Ploy deployment.",
+				}
+
+				actionSpinner.Create()
+				actionSpinner.SetOutput(os.Stdout)
+				
+				outputLogger := utils.TerminalSpinnerLogger{}
+				// Stream the results to the terminal.
+				streamer := optup.ProgressStreams(&outputLogger)
+
 				// Wire up our update to stream progress to stdout
 				// We give the user the option to actually view the Pulumi output
-				var streamer optup.Option
 				if verbose {
-					streamer = optup.ProgressStreams(os.Stdout)
+					streamer = optup.ProgressStreams(&outputLogger)
 				} else {
 					streamer = optup.ProgressStreams(ioutil.Discard)
 				}
-				_, err = pulumiStack.Up(ctx, streamer)
+				result, err := pulumiStack.Up(ctx, streamer)
+
+				if err != nil {
+					actionSpinner.Fail()
+					return fmt.Errorf("error running stack update: %v", err)
+				}
+
+				actionSpinner.Stop()
+
+				utils.ClearLine()
+				utils.Print("")
+
+				utils.Print(utils.TextColor("Outputs", color.FgGreen))
+				for key, value := range result.Outputs {
+					utils.Printf("    - %s: %v\n", key, value.Value)
+				}
+
+				utils.Print("")
+				return nil
+
 			}
 
 			return nil
