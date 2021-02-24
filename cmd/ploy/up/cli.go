@@ -101,9 +101,9 @@ func Command() *cobra.Command {
 			} else {
 
 				actionSpinner := utils.TerminalSpinner{
-					SpinnerText:   "Creating ploy deployment",
-					CompletedText: "✅ Ploy deployment created.",
-					FailureText:   "❌ Error creating Ploy deployment.",
+					SpinnerText:   fmt.Sprintf("Creating ploy deployment: %s", name),
+					CompletedText: fmt.Sprintf("✅ Ploy deployment created: %s", name),
+					FailureText:   fmt.Sprintf("❌ Error creating Ploy deployment: %s", name),
 				}
 
 				actionSpinner.Create()
