@@ -1,6 +1,6 @@
 module github.com/jaxxstorm/ploy
 
-go 1.15
+go 1.16
 
 require (
 	github.com/buger/goterm v0.0.0-20200322175922-2f3e71b85129
@@ -9,10 +9,10 @@ require (
 	github.com/janeczku/go-spinner v0.0.0-20150530144529-cf8ef1d64394
 	github.com/manifoldco/promptui v0.8.0
 	github.com/olekukonko/tablewriter v0.0.4
-	github.com/pulumi/pulumi-aws/sdk/v3 v3.11.0
-	github.com/pulumi/pulumi-docker/sdk/v2 v2.4.0
-	github.com/pulumi/pulumi-kubernetes/sdk/v2 v2.6.3
-	github.com/pulumi/pulumi/sdk/v2 v2.12.1
+	github.com/pulumi/pulumi-aws/sdk/v3 v3.30.0
+	github.com/pulumi/pulumi-docker/sdk/v2 v2.8.1
+	github.com/pulumi/pulumi-kubernetes/sdk/v2 v2.8.2
+	github.com/pulumi/pulumi/sdk/v2 v2.21.2
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/viper v1.7.1
