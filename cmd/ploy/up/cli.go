@@ -68,17 +68,22 @@ func Command() *cobra.Command {
 				return err
 			}
 
+			err = pulumiStack.SetConfig(ctx, "aws:skipMetadataApiCheck", auto.ConfigValue{Value: "false"})
+			if err != nil {
+				return err
+			}
+
 			// Set up the workspace and install all the required plugins the user needs
 			workspace := pulumiStack.Workspace()
-			err = workspace.InstallPlugin(ctx, "aws", "v3.19.2")
+			err = workspace.InstallPlugin(ctx, "aws", "v3.30.0")
 			if err != nil {
 				return fmt.Errorf("error installing aws plugin: %v\n", err)
 			}
-			err = workspace.InstallPlugin(ctx, "kubernetes", "v2.7.4")
+			err = workspace.InstallPlugin(ctx, "kubernetes", "v2.8.2")
 			if err != nil {
 				return fmt.Errorf("error installing kubernetes plugin: %v\n", err)
 			}
-			err = workspace.InstallPlugin(ctx, "docker", "v2.5.0")
+			err = workspace.InstallPlugin(ctx, "docker", "v2.8.1")
 			if err != nil {
 				return fmt.Errorf("error installing docker plugin: %v\n", err)
 			}
