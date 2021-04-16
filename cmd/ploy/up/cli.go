@@ -3,15 +3,17 @@ package up
 import (
 	"context"
 	"fmt"
+	"os"
+
 	n "github.com/jaxxstorm/ploy/pkg/name"
 	program "github.com/jaxxstorm/ploy/pkg/pulumi"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
+	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/events"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optpreview"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optup"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io/ioutil"
-	"os"
 )
 
 var (
@@ -49,7 +51,7 @@ func Command() *cobra.Command {
 			// check if we have a valid Dockerfile before proceeding
 			dockerfile := fmt.Sprintf("%s/Dockerfile", directory)
 			if _, err := os.Stat(dockerfile); os.IsNotExist(err) {
-				return fmt.Errorf("no Dockerfile found in %s: %v\n", directory, err)
+				return fmt.Errorf("no Dockerfile found in %s: %v", directory, err)
 			}
 
 			// Create a stack in our backend
@@ -59,7 +61,7 @@ func Command() *cobra.Command {
 			// Create a stack. We'll set the program shortly
 			pulumiStack, err := auto.UpsertStackInlineSource(ctx, stackName, "ploy", nil)
 			if err != nil {
-				return fmt.Errorf("failed to create or select stack: %v\n", err)
+				return fmt.Errorf("failed to create or select stack: %v", err)
 			}
 
 			// set the AWS region from config
@@ -75,17 +77,11 @@ func Command() *cobra.Command {
 
 			// Set up the workspace and install all the required plugins the user needs
 			workspace := pulumiStack.Workspace()
-			err = workspace.InstallPlugin(ctx, "aws", "v3.30.0")
+
+			err = program.EnsurePlugins(workspace)
+
 			if err != nil {
-				return fmt.Errorf("error installing aws plugin: %v\n", err)
-			}
-			err = workspace.InstallPlugin(ctx, "kubernetes", "v2.8.2")
-			if err != nil {
-				return fmt.Errorf("error installing kubernetes plugin: %v\n", err)
-			}
-			err = workspace.InstallPlugin(ctx, "docker", "v2.8.1")
-			if err != nil {
-				return fmt.Errorf("error installing docker plugin: %v\n", err)
+				return err
 			}
 
 			// Now, we set the pulumi program that is going to run
@@ -94,7 +90,7 @@ func Command() *cobra.Command {
 			if dryrun {
 				_, err = pulumiStack.Preview(ctx, optpreview.Message("Running ploy dryrun"))
 				if err != nil {
-					return fmt.Errorf("error creating stack: %v\n", err)
+					return fmt.Errorf("error creating stack: %v", err)
 				}
 			} else {
 				// Wire up our update to stream progress to stdout
@@ -103,9 +99,17 @@ func Command() *cobra.Command {
 				if verbose {
 					streamer = optup.ProgressStreams(os.Stdout)
 				} else {
-					streamer = optup.ProgressStreams(ioutil.Discard)
+					upChannel := make(chan events.EngineEvent)
+					go collectEvents(upChannel)
+
+					streamer = optup.EventStreams(upChannel)
+
 				}
 				_, err = pulumiStack.Up(ctx, streamer)
+
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -120,4 +124,45 @@ func Command() *cobra.Command {
 	f.BoolVar(&nlb, "nlb", false, "Provision an NLB instead of ELB")
 
 	return command
+}
+
+func collectEvents(eventChannel <-chan events.EngineEvent) {
+	for {
+		event, ok := <-eventChannel
+		if !ok {
+			return
+		}
+
+		if event.ResourcePreEvent != nil {
+
+			switch event.ResourcePreEvent.Metadata.Type {
+			case "aws:ecr/repository:Repository":
+				log.Infof("Creating ECR Repository")
+			case "kubernetes:core/v1:Namespace":
+				log.Infof("Creating Kubernetes Namespace")
+			case "kubernetes:core/v1:Service":
+				log.Infof("Creating Kubernetes Service")
+			case "kubernetes:apps/v1:Deployment":
+				log.Infof("Creating Kubernetes Deployment")
+			case "docker:image:Image":
+				log.Infof("Creating Docker Image")
+			}
+		}
+
+		if event.ResOutputsEvent != nil {
+			switch event.ResOutputsEvent.Metadata.Type {
+			case "aws:ecr/repository:Repository":
+				log.Infof("Created ECR Repository: %v", event.ResOutputsEvent.Metadata.New.Outputs["repositoryUrl"])
+			case "kubernetes:core/v1:Namespace":
+				log.Infof("Created Kubernetes Namespace")
+			case "kubernetes:core/v1:Service":
+				log.Infof("Created Kubernetes Service")
+			case "kubernetes:apps/v1:Deployment":
+				log.Infof("Created Kubernetes Deployment")
+			case "docker:image:Image":
+				log.Infof("Creating Docker Image: %v", event.ResOutputsEvent.Metadata.New.Outputs["baseImageName"])
+			}
+
+		}
+	}
 }
