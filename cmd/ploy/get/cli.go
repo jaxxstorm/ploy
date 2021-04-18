@@ -5,7 +5,7 @@ import (
 	"fmt"
 	n "github.com/jaxxstorm/ploy/pkg/name"
 	"github.com/olekukonko/tablewriter"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -1,12 +1,12 @@
-package program
+package pulumi
 
 import (
 	"context"
 
 	"fmt"
 
-	_ "github.com/pulumi/pulumi/sdk/v2/go/common/workspace"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	_ "github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
 )
 
 // EnsurePlugins installs the needed Pulumi plugins for ploy to run

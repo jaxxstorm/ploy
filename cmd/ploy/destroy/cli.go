@@ -6,10 +6,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	program "github.com/jaxxstorm/ploy/pkg/pulumi"
+	pulumi "github.com/jaxxstorm/ploy/pkg/pulumi"
 	"github.com/manifoldco/promptui"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optdestroy"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optdestroy"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -61,7 +61,7 @@ func Command() *cobra.Command {
 			// create a stack. We'll set the program shortly
 			pulumiStack, err := auto.UpsertStackInlineSource(ctx, stackName, "ploy", nil)
 			if err != nil {
-				return fmt.Errorf("failed to create or select stack: %v\n", err)
+				return fmt.Errorf("failed to create or select stack: %v", err)
 			}
 
 			// set the AWS region from config
@@ -73,7 +73,7 @@ func Command() *cobra.Command {
 			// set up workspace and install plugins
 			workspace := pulumiStack.Workspace()
 
-			err = program.EnsurePlugins(workspace)
+			err = pulumi.EnsurePlugins(workspace)
 
 			if err != nil {
 				return err

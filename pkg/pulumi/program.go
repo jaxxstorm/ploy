@@ -1,18 +1,19 @@
-package program
+package pulumi
 
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/pulumi/pulumi-aws/sdk/v3/go/aws/ecr"
-	"github.com/pulumi/pulumi-docker/sdk/v2/go/docker"
-	appsv1 "github.com/pulumi/pulumi-kubernetes/sdk/v2/go/kubernetes/apps/v1"
-	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v2/go/kubernetes/core/v1"
-	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v2/go/kubernetes/meta/v1"
-	"github.com/pulumi/pulumi/sdk/v2/go/pulumi"
-	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
+	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
+	appsv1 "github.com/pulumi/pulumi-kubernetes/sdk/v3/go/kubernetes/apps/v1"
+	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v3/go/kubernetes/core/v1"
+	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v3/go/kubernetes/meta/v1"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	log "github.com/sirupsen/logrus"
 )
 
 type PloyDeployment struct {
@@ -42,7 +43,7 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 	}
 
 	// retrieve the credentials from the ECR repo
-	repoCreds := repo.RegistryId.ApplyStringArray(func(id string) ([]string, error) {
+	repoCreds := repo.RegistryId.ApplyT(func(id string) ([]string, error) {
 		creds, err := ecr.GetCredentials(ctx, &ecr.GetCredentialsArgs{
 			RegistryId: id,
 		}, pulumi.Parent(ployDeployment))
@@ -56,7 +57,8 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 		}
 
 		return strings.Split(string(data), ":"), nil
-	})
+	}).(pulumi.StringArrayOutput)
+
 	repoUser := repoCreds.Index(pulumi.Int(0))
 	repoPass := repoCreds.Index(pulumi.Int(1))
 
@@ -78,12 +80,12 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 	// Now we need to handle the Kubernetes of it all
 	labels := pulumi.StringMap{
 		"app.kubernetes.io/app": pulumi.String(name),
-		"app.getploy.io/name": pulumi.String(name),
+		"app.getploy.io/name":   pulumi.String(name),
 	}
 
 	namespace, err := corev1.NewNamespace(ctx, name, &corev1.NamespaceArgs{
 		Metadata: &metav1.ObjectMetaArgs{
-			Name: pulumi.String(name),
+			Name:   pulumi.String(name),
 			Labels: labels,
 		},
 	}, pulumi.Parent(ployDeployment))
@@ -93,9 +95,9 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 
 	_, err = appsv1.NewDeployment(ctx, name, &appsv1.DeploymentArgs{
 		Metadata: &metav1.ObjectMetaArgs{
-			Name: pulumi.String(name),
+			Name:      pulumi.String(name),
 			Namespace: namespace.Metadata.Name().Elem(),
-			Labels: labels,
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpecArgs{
 			Selector: &metav1.LabelSelectorArgs{
@@ -104,13 +106,13 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 			Replicas: pulumi.Int(3),
 			Template: &corev1.PodTemplateSpecArgs{
 				Metadata: &metav1.ObjectMetaArgs{
-					Name: pulumi.String(name),
+					Name:   pulumi.String(name),
 					Labels: labels,
 				},
 				Spec: &corev1.PodSpecArgs{
 					Containers: corev1.ContainerArray{
 						corev1.ContainerArgs{
-							Name: pulumi.String("name"),
+							Name:  pulumi.String("name"),
 							Image: image.ImageName,
 							Ports: corev1.ContainerPortArray{
 								&corev1.ContainerPortArgs{
@@ -141,9 +143,9 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 
 	service, err := corev1.NewService(ctx, name, &corev1.ServiceArgs{
 		Metadata: &metav1.ObjectMetaArgs{
-			Name: pulumi.String(name),
-			Namespace: namespace.Metadata.Name().Elem(),
-			Labels: labels,
+			Name:        pulumi.String(name),
+			Namespace:   namespace.Metadata.Name().Elem(),
+			Labels:      labels,
 			Annotations: annotations,
 		},
 		Spec: &corev1.ServiceSpecArgs{
@@ -153,7 +155,7 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 					TargetPort: pulumi.Int(80),
 				},
 			},
-			Type: serviceType,
+			Type:     serviceType,
 			Selector: labels,
 		},
 	}, pulumi.Parent(namespace), pulumi.DependsOn([]pulumi.Resource{image}))
@@ -183,7 +185,7 @@ func Deploy(name string, directory string, nlb bool) pulumi.RunFunc {
 
 		_, err := NewPloyDeployment(ctx, name, &PloyDeploymentArgs{
 			Directory: directory,
-			Nlb: nlb,
+			Nlb:       nlb,
 		})
 		if err != nil {
 			return err

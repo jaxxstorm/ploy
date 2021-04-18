@@ -6,11 +6,11 @@ import (
 	"os"
 
 	n "github.com/jaxxstorm/ploy/pkg/name"
-	program "github.com/jaxxstorm/ploy/pkg/pulumi"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/events"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optpreview"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optup"
+	pulumi "github.com/jaxxstorm/ploy/pkg/pulumi"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/events"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -78,14 +78,14 @@ func Command() *cobra.Command {
 			// Set up the workspace and install all the required plugins the user needs
 			workspace := pulumiStack.Workspace()
 
-			err = program.EnsurePlugins(workspace)
+			err = pulumi.EnsurePlugins(workspace)
 
 			if err != nil {
 				return err
 			}
 
 			// Now, we set the pulumi program that is going to run
-			workspace.SetProgram(program.Deploy(name, directory, nlb))
+			workspace.SetProgram(pulumi.Deploy(name, directory, nlb))
 
 			if dryrun {
 				_, err = pulumiStack.Preview(ctx, optpreview.Message("Running ploy dryrun"))
