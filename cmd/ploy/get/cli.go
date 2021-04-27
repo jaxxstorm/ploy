@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	n "github.com/jaxxstorm/ploy/pkg/name"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,29 +30,21 @@ func Command() *cobra.Command {
 				return fmt.Errorf("must specify pulumi org via flag or config file")
 			}
 
-			// Generate a random name to use
-			name := n.GenerateName()
-
-			/*
-			 * This is a little hacky, but it works.
-			 * I don't want to have to manage the workspaces myself, so I generate a stack name randomly
-			 */
-			stackName := auto.FullyQualifiedStackName(org, "ploy", name)
-			// Create a stack. We never set the program, we're not going to use it
-			pulumiStack, err := auto.UpsertStackInlineSource(ctx, stackName, "ploy", nil)
-			if err != nil {
-				return fmt.Errorf("failed to create or select stack: %v\n", err)
+			project := workspace.Project{
+				Name:    tokens.PackageName("ploy"),
+				Runtime: workspace.NewProjectRuntimeInfo("go", nil),
 			}
+			nilProgram := auto.Program(func(pCtx *pulumi.Context) error { return nil })
 
-			workspace := pulumiStack.Workspace()
-
-			// Then we delete the stack from earlier so we don't include it in our list
-			workspace.RemoveStack(ctx, name)
+			workspace, err := auto.NewLocalWorkspace(ctx, nilProgram, auto.Project(project))
+			if err != nil {
+				return fmt.Errorf("error creating local workspace: %v", err)
+			}
 
 			// List the stacks in our workspace, each stack is an instance of an app
 			stackList, err := workspace.ListStacks(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to list available stacks: %v\n", err)
+				return fmt.Errorf("failed to list available stacks: %v", err)
 			}
 
 			if len(stackList) > 0 {
@@ -69,6 +63,10 @@ func Command() *cobra.Command {
 						return fmt.Errorf("error selecting stack")
 					}
 					out, err := stack.Outputs(ctx)
+
+					if err != nil {
+						return fmt.Errorf("no stack outputs found: %v", err)
+					}
 
 					var url string
 					if out["address"].Value == nil {

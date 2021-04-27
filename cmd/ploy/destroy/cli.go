@@ -6,10 +6,13 @@ import (
 	"io/ioutil"
 	"os"
 
-	pulumi "github.com/jaxxstorm/ploy/pkg/pulumi"
+	pulumiProgram "github.com/jaxxstorm/ploy/pkg/pulumi"
 	"github.com/manifoldco/promptui"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optdestroy"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -57,10 +60,23 @@ func Command() *cobra.Command {
 
 			// create a stack in our backend
 			stackName := auto.FullyQualifiedStackName(org, "ploy", name)
-			// create a stack. We'll set the program shortly
-			pulumiStack, err := auto.UpsertStackInlineSource(ctx, stackName, "ploy", nil)
+
+			project := workspace.Project{
+				Name:    tokens.PackageName("ploy"),
+				Runtime: workspace.NewProjectRuntimeInfo("go", nil),
+			}
+
+			nilProgram := auto.Program(func(pCtx *pulumi.Context) error { return nil })
+
+			workspace, err := auto.NewLocalWorkspace(ctx, nilProgram, auto.Project(project))
 			if err != nil {
-				return fmt.Errorf("failed to create or select stack: %v", err)
+				return fmt.Errorf("error creating local workspace: %v", err)
+			}
+
+			pulumiStack, err := auto.SelectStack(ctx, stackName, workspace)
+
+			if err != nil {
+				return fmt.Errorf("error getting stack: %v", err)
 			}
 
 			// set the AWS region from config
@@ -69,10 +85,7 @@ func Command() *cobra.Command {
 				return err
 			}
 
-			// set up workspace and install plugins
-			workspace := pulumiStack.Workspace()
-
-			err = pulumi.EnsurePlugins(workspace)
+			err = pulumiProgram.EnsurePlugins(workspace)
 
 			if err != nil {
 				return err
