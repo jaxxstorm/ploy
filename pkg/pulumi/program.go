@@ -31,7 +31,7 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 	ployDeployment := &PloyDeployment{}
 
 	// register a component resource to group all the resource together
-	err := ctx.RegisterComponentResource("ploy:deployment", name, ployDeployment, opts...)
+	err := ctx.RegisterComponentResource("ploy:index:Deployment", name, ployDeployment, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -3,7 +3,6 @@ package up
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	n "github.com/jaxxstorm/ploy/pkg/name"
@@ -98,13 +97,13 @@ func Command() *cobra.Command {
 					upChannel := make(chan events.EngineEvent)
 					go collectEvents(upChannel)
 
-					streamer = optup.ProgressStreams(ioutil.Discard)
+					streamer = optup.EventStreams(upChannel)
 				}
 				_, err = pulumiStack.Up(ctx, streamer)
 
-				// if err != nil {
-				// 	return err
-				// }
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
