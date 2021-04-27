@@ -3,15 +3,16 @@ package up
 import (
 	"context"
 	"fmt"
-	n "github.com/jaxxstorm/ploy/pkg/name"
-	program "github.com/jaxxstorm/ploy/pkg/pulumi"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optpreview"
-	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optup"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
+
+	n "github.com/jaxxstorm/ploy/pkg/name"
+	program "github.com/jaxxstorm/ploy/pkg/pulumi"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (

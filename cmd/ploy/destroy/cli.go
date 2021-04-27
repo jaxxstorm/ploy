@@ -3,14 +3,15 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+
 	"github.com/manifoldco/promptui"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto/optdestroy"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io/ioutil"
-	"os"
 )
 
 var (
@@ -25,7 +26,7 @@ func Command() *cobra.Command {
 		Use:   "destroy",
 		Short: "Remove your application",
 		Long:  "Remove your application from Kubernetes",
-		Args: cobra.MinimumNArgs(1),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			ctx := context.Background()

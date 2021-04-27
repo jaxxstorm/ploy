@@ -3,13 +3,14 @@ package get
 import (
 	"context"
 	"fmt"
+	"os"
+
 	n "github.com/jaxxstorm/ploy/pkg/name"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pulumi/pulumi/sdk/v2/go/x/auto"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 )
 
 func Command() *cobra.Command {
@@ -68,7 +69,7 @@ func Command() *cobra.Command {
 						return fmt.Errorf("error selecting stack")
 					}
 					out, err := stack.Outputs(ctx)
-					
+
 					var url string
 					if out["address"].Value == nil {
 						url = ""
@@ -77,7 +78,7 @@ func Command() *cobra.Command {
 					}
 
 					// add all the values to the output tables
-					table.Append([]string{values.Name, values.LastUpdate, values.URL, url })
+					table.Append([]string{values.Name, values.LastUpdate, values.URL, url})
 				}
 
 				// Render the table to stdout

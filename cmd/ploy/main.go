@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/jaxxstorm/ploy/cmd/ploy/destroy"
 	"github.com/jaxxstorm/ploy/cmd/ploy/get"
 	"github.com/jaxxstorm/ploy/cmd/ploy/up"
@@ -9,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 )
 
 var (
