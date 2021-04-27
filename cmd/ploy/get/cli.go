@@ -44,7 +44,7 @@ func Command() *cobra.Command {
 			// List the stacks in our workspace, each stack is an instance of an app
 			stackList, err := workspace.ListStacks(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to list available stacks: %v\n", err)
+				return fmt.Errorf("failed to list available stacks: %v", err)
 			}
 
 			if len(stackList) > 0 {
@@ -63,6 +63,10 @@ func Command() *cobra.Command {
 						return fmt.Errorf("error selecting stack")
 					}
 					out, err := stack.Outputs(ctx)
+
+					if err != nil {
+						return fmt.Errorf("no stack outputs found: %v", err)
+					}
 
 					var url string
 					if out["address"].Value == nil {

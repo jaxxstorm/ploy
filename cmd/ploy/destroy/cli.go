@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	pulumiProgram "github.com/jaxxstorm/ploy/pkg/pulumi"
 	"github.com/manifoldco/promptui"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optdestroy"
@@ -19,7 +20,6 @@ import (
 
 var (
 	dryrun    bool
-	name      string
 	directory string
 	verbose   bool
 )
@@ -85,18 +85,10 @@ func Command() *cobra.Command {
 				return err
 			}
 
-			// set up workspace and install plugins
-			err = workspace.InstallPlugin(ctx, "aws", "v3.11.0")
+			err = pulumiProgram.EnsurePlugins(workspace)
+
 			if err != nil {
-				return fmt.Errorf("error installing aws plugin: %v", err)
-			}
-			err = workspace.InstallPlugin(ctx, "kubernetes", "v2.6.3")
-			if err != nil {
-				return fmt.Errorf("error installing kubernetes plugin: %v", err)
-			}
-			err = workspace.InstallPlugin(ctx, "docker", "v2.4.0")
-			if err != nil {
-				return fmt.Errorf("error installing docker plugin: %v", err)
+				return err
 			}
 
 			var streamer optdestroy.Option

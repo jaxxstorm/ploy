@@ -1,4 +1,4 @@
-package program
+package pulumi
 
 import (
 	"encoding/base64"
@@ -31,23 +31,15 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 	ployDeployment := &PloyDeployment{}
 
 	// register a component resource to group all the resource together
-	err := ctx.RegisterComponentResource("ploy:deployment", name, ployDeployment, opts...)
+	err := ctx.RegisterComponentResource("ploy:index:Deployment", name, ployDeployment, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Infof("Creating application: %s", name)
-	// create a new ECR repository to store our images
-	log.Info("Creating ECR repository")
 	repo, err := ecr.NewRepository(ctx, name, &ecr.RepositoryArgs{})
 	if err != nil {
 		return nil, err
 	}
-
-	repo.RepositoryUrl.ApplyT(func(url string) string {
-		log.Infof("Repository created: %s", url)
-		return url
-	})
 
 	// retrieve the credentials from the ECR repo
 	repoCreds := repo.RegistryId.ApplyT(func(id string) ([]string, error) {
@@ -70,7 +62,6 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 	repoPass := repoCreds.Index(pulumi.Int(1))
 
 	// build the docker image
-	log.Info("Creating local docker image")
 	image, err := docker.NewImage(ctx, name, &docker.ImageArgs{
 		Build: docker.DockerBuildArgs{
 			Context: pulumi.String(filepath.Join(args.Directory)),
@@ -83,6 +74,10 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 		},
 	}, pulumi.Parent(ployDeployment))
 
+	if err != nil {
+		return nil, err
+	}
+
 	ployDeployment.ImageName = image.ImageName
 
 	// Now we need to handle the Kubernetes of it all
@@ -91,7 +86,6 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 		"app.getploy.io/name":   pulumi.String(name),
 	}
 
-	log.Info("Creating Kubernetes namespace")
 	namespace, err := corev1.NewNamespace(ctx, name, &corev1.NamespaceArgs{
 		Metadata: &metav1.ObjectMetaArgs{
 			Name:   pulumi.String(name),
@@ -102,7 +96,6 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 		return nil, err
 	}
 
-	log.Info("Creating Kubernetes deployment")
 	_, err = appsv1.NewDeployment(ctx, name, &appsv1.DeploymentArgs{
 		Metadata: &metav1.ObjectMetaArgs{
 			Name:      pulumi.String(name),
@@ -151,7 +144,6 @@ func NewPloyDeployment(ctx *pulumi.Context, name string, args *PloyDeploymentArg
 		annotations = pulumi.StringMap{}
 	}
 
-	log.Info("Creating Kubernetes service")
 	service, err := corev1.NewService(ctx, name, &corev1.ServiceArgs{
 		Metadata: &metav1.ObjectMetaArgs{
 			Name:        pulumi.String(name),
