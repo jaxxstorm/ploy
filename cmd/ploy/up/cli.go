@@ -69,11 +69,6 @@ func Command() *cobra.Command {
 				return err
 			}
 
-			err = pulumiStack.SetConfig(ctx, "aws:skipMetadataApiCheck", auto.ConfigValue{Value: "false"})
-			if err != nil {
-				return err
-			}
-
 			// Set up the workspace and install all the required plugins the user needs
 			workspace := pulumiStack.Workspace()
 			err = workspace.InstallPlugin(ctx, "aws", "v3.30.0")
