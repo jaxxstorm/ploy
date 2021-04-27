@@ -7,8 +7,9 @@ import (
 	"os"
 
 	n "github.com/jaxxstorm/ploy/pkg/name"
-	program "github.com/jaxxstorm/ploy/pkg/pulumi"
+	pulumi "github.com/jaxxstorm/ploy/pkg/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/events"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
 	"github.com/spf13/cobra"
@@ -50,7 +51,7 @@ func Command() *cobra.Command {
 			// check if we have a valid Dockerfile before proceeding
 			dockerfile := fmt.Sprintf("%s/Dockerfile", directory)
 			if _, err := os.Stat(dockerfile); os.IsNotExist(err) {
-				return fmt.Errorf("no Dockerfile found in %s: %v\n", directory, err)
+				return fmt.Errorf("no Dockerfile found in %s: %v", directory, err)
 			}
 
 			// Create a stack in our backend
@@ -60,7 +61,7 @@ func Command() *cobra.Command {
 			// Create a stack. We'll set the program shortly
 			pulumiStack, err := auto.UpsertStackInlineSource(ctx, stackName, "ploy", nil)
 			if err != nil {
-				return fmt.Errorf("failed to create or select stack: %v\n", err)
+				return fmt.Errorf("failed to create or select stack: %v", err)
 			}
 
 			// set the AWS region from config
@@ -69,33 +70,22 @@ func Command() *cobra.Command {
 				return err
 			}
 
-			err = pulumiStack.SetConfig(ctx, "aws:skipMetadataApiCheck", auto.ConfigValue{Value: "false"})
+			// Set up the workspace and install all the required plugins the user needs
+			workspace := pulumiStack.Workspace()
+
+			err = pulumi.EnsurePlugins(workspace)
+
 			if err != nil {
 				return err
 			}
 
-			// Set up the workspace and install all the required plugins the user needs
-			workspace := pulumiStack.Workspace()
-			err = workspace.InstallPlugin(ctx, "aws", "v3.30.0")
-			if err != nil {
-				return fmt.Errorf("error installing aws plugin: %v\n", err)
-			}
-			err = workspace.InstallPlugin(ctx, "kubernetes", "v2.8.2")
-			if err != nil {
-				return fmt.Errorf("error installing kubernetes plugin: %v\n", err)
-			}
-			err = workspace.InstallPlugin(ctx, "docker", "v2.8.1")
-			if err != nil {
-				return fmt.Errorf("error installing docker plugin: %v\n", err)
-			}
-
 			// Now, we set the pulumi program that is going to run
-			workspace.SetProgram(program.Deploy(name, directory, nlb))
+			workspace.SetProgram(pulumi.Deploy(name, directory, nlb))
 
 			if dryrun {
 				_, err = pulumiStack.Preview(ctx, optpreview.Message("Running ploy dryrun"))
 				if err != nil {
-					return fmt.Errorf("error creating stack: %v\n", err)
+					return fmt.Errorf("error creating stack: %v", err)
 				}
 			} else {
 				// Wire up our update to stream progress to stdout
@@ -104,9 +94,16 @@ func Command() *cobra.Command {
 				if verbose {
 					streamer = optup.ProgressStreams(os.Stdout)
 				} else {
+					upChannel := make(chan events.EngineEvent)
+					go collectEvents(upChannel)
+
 					streamer = optup.ProgressStreams(ioutil.Discard)
 				}
 				_, err = pulumiStack.Up(ctx, streamer)
+
+				// if err != nil {
+				// 	return err
+				// }
 			}
 
 			return nil
@@ -121,4 +118,53 @@ func Command() *cobra.Command {
 	f.BoolVar(&nlb, "nlb", false, "Provision an NLB instead of ELB")
 
 	return command
+}
+
+func collectEvents(eventChannel <-chan events.EngineEvent) {
+
+	for {
+
+		var event events.EngineEvent
+		var ok bool
+
+		// createLogger := log.WithFields(log.Fields{"event": "CREATING"})
+		// completeLogger := log.WithFields(log.Fields{"event": "COMPLETE"})
+
+		event, ok = <-eventChannel
+		if !ok {
+			return
+		}
+
+		if event.ResourcePreEvent != nil {
+
+			switch event.ResourcePreEvent.Metadata.Type {
+			case "aws:ecr/repository:Repository":
+				//createLogger.WithFields(log.Fields{"resource": event.ResourcePreEvent.Metadata.Type}).Info("Creating ECR repository")
+			case "kubernetes:core/v1:Namespace":
+				//createLogger.WithFields(log.Fields{"resource": event.ResourcePreEvent.Metadata.Type}).Info("Creating Kubernetes Namespace")
+			case "kubernetes:core/v1:Service":
+				//createLogger.WithFields(log.Fields{"resource": event.ResourcePreEvent.Metadata.Type}).Info("Creating Kubernetes Service")
+			case "kubernetes:apps/v1:Deployment":
+				//createLogger.WithFields(log.Fields{"resource": event.ResourcePreEvent.Metadata.Type}).Info("Creating Kubernetes Deployment")
+			case "docker:image:Image":
+				//createLogger.WithFields(log.Fields{"resource": event.ResourcePreEvent.Metadata.Type}).Info("Creating Docker Image")
+			}
+		}
+
+		if event.ResOutputsEvent != nil {
+			switch event.ResOutputsEvent.Metadata.Type {
+			case "aws:ecr/repository:Repository":
+				//completeLogger.WithFields(log.Fields{"name": event.ResOutputsEvent.Metadata.New.Outputs["repositoryUrl"], "resource": event.ResOutputsEvent.Metadata.Type}).Info("Created ECR repository")
+			case "kubernetes:core/v1:Namespace":
+				//completeLogger.WithFields(log.Fields{"resource": event.ResOutputsEvent.Metadata.Type}).Info("Created Kubernetes Namespace")
+			case "kubernetes:core/v1:Service":
+				//completeLogger.WithFields(log.Fields{"resource": event.ResOutputsEvent.Metadata.Type}).Info("Created Kubernetes Service")
+			case "kubernetes:apps/v1:Deployment":
+				//completeLogger.WithFields(log.Fields{"resource": event.ResOutputsEvent.Metadata.Type}).Info("Created Kubernetes Deployment")
+			case "docker:image:Image":
+				//completeLogger.WithFields(log.Fields{"name": event.ResOutputsEvent.Metadata.New.Outputs["baseImageName"], "resource": event.ResOutputsEvent.Metadata.Type}).Info("Created Docker Image")
+			}
+
+		}
+	}
 }
