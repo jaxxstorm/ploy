@@ -76,7 +76,7 @@ func Command() *cobra.Command {
 			pulumiStack, err := auto.SelectStack(ctx, stackName, workspace)
 
 			if err != nil {
-				return fmt.Errorf("error getting stack: %v", err)
+				return fmt.Errorf("error getting stack: %v", err.Error())
 			}
 
 			// set the AWS region from config
