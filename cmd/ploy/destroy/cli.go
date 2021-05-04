@@ -85,6 +85,12 @@ func Command() *cobra.Command {
 				return err
 			}
 
+			// skip the metadata check
+            err = pulumiStack.SetConfig(ctx, "aws:skipMetadataApiCheck", auto.ConfigValue{Value: "false"})
+            if err != nil {
+                return err
+            }
+
 			err = pulumiProgram.EnsurePlugins(workspace)
 
 			if err != nil {

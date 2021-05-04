@@ -70,6 +70,12 @@ func Command() *cobra.Command {
 				return err
 			}
 
+			// skip the metadata check
+			err = pulumiStack.SetConfig(ctx, "aws:skipMetadataApiCheck", auto.ConfigValue{Value: "false"})
+			if err != nil {
+				return err
+			}
+
 			// Set up the workspace and install all the required plugins the user needs
 			workspace := pulumiStack.Workspace()
 
@@ -99,6 +105,7 @@ func Command() *cobra.Command {
 
 					streamer = optup.EventStreams(upChannel)
 				}
+				log.Infof("Creating ploy application: %s", name)
 				_, err = pulumiStack.Up(ctx, streamer)
 
 				if err != nil {
